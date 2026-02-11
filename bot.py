@@ -7,6 +7,8 @@ from telebot import TeleBot, types
 import yt_dlp
 from dotenv import load_dotenv
 import subprocess
+from flask import Flask
+from threading import Thread
 
 # =======================
 # تحميل التوكن من .env
@@ -31,11 +33,11 @@ WELCOME_TEXT = (
     "👋 مرحبًا بك في بوت *جنكيز*\n\n"
     "هذا البوت مصمّم لدعم المستخدمين في المجالات التالية:\n"
     "• صُنّاع محتوى TikTok\n"
-    "• لاعبي Free Fire\n"
     "• المهتمين بالبرمجة والتقنية\n\n"
     "🔹 يوفّر البوت أدوات آمنة وواقعية لمساعدتك في عملك.\n"
     "🔹 بدون أي محتوى مخالف أو عناوين مضللة.\n"
     "🔹 جميع الأدوات متوافقة مع سياسات TikTok الرسمية.\n\n"
+    "⚡ البوت لا زال تحت التطوير والمميزات الأفضل والأفضل قادمة قريبًا!\n\n"
     "مطور هذا البوت: جنكيز"
 )
 
@@ -44,26 +46,26 @@ WELCOME_TEXT = (
 # =======================
 PROGRAMMING_INFO = (
     "💻 لغات البرمجة:\n\n"
-    "• Python: سهلة وقوية للبوتات والتطبيقات.\n"
-    "• JavaScript: أساس الويب والتفاعل.\n"
-    "• HTML & CSS: بناء وتصميم المواقع.\n"
+    "• Python: قوية وسهلة للبوتات والتطبيقات.\n"
+    "• JavaScript: أساسي للويب والتفاعل.\n"
+    "• HTML & CSS: لبناء وتصميم المواقع.\n"
 )
 
 # =======================
-# نصائح Free Fire طويلة
+# نصائح لصناع محتوى TikTok
 # =======================
-FF_TIPS = (
-    "🎮 نصائح مهمة لصنّاع محتوى Free Fire على TikTok:\n\n"
-    "1️⃣ تجنّب العناوين المضللة مثل (شحن مجاني – هكر – متجر جواهر).\n"
-    "2️⃣ لا تنشر محتوى يوهم المستخدمين بأي مزايا غير حقيقية.\n"
-    "3️⃣ احترم حقوق النشر.\n"
-    "4️⃣ المحتوى التعليمي أفضل.\n"
-    "5️⃣ تجنب التكرار.\n"
-    "6️⃣ استخدم موسيقى مرخصة من مكتبة TikTok.\n"
-    "7️⃣ الجودة أهم من الكمية.\n"
-    "8️⃣ لا تضع روابط خارجية مشبوهة.\n"
-    "9️⃣ التزم بإرشادات المجتمع.\n"
-    "🔟 كن صادقًا مع جمهورك."
+TIKTOK_TIPS = (
+    "🎯 نصائح مهمة لصنّاع محتوى TikTok:\n\n"
+    "1️⃣ تجنّب نشر محتوى مضلل أو محمي بحقوق الآخرين.\n"
+    "2️⃣ لا تستخدم عناوين خادعة مثل: شحن مجاني، هكر، متجر جواهر.\n"
+    "3️⃣ التزم بالموسيقى والصوتيات المرخصة في TikTok.\n"
+    "4️⃣ قم بعمل محتوى أصلي وتفاعلي ليظهر في الاكسبلور.\n"
+    "5️⃣ التكرار المفرط يقلل الوصول والمشاهدات.\n"
+    "6️⃣ احرص على جودة الفيديو والصوت أكثر من الكمية.\n"
+    "7️⃣ استخدم هاشتاغات دقيقة وشائعة لتعزيز الوصول.\n"
+    "8️⃣ التفاعل مع التعليقات والمشاهدين يزيد من انتشار المحتوى.\n"
+    "9️⃣ لا تنشر روابط خارجية أو صفحات مشبوهة.\n"
+    "🔟 اتبع سياسات المجتمع لتجنب حظر الحساب أو تخفيض الرؤية.\n"
 )
 
 # =======================
@@ -72,9 +74,9 @@ FF_TIPS = (
 def control_panel():
     kb = types.InlineKeyboardMarkup(row_width=1)
     kb.add(
-        types.InlineKeyboardButton("📥 تحميل TikTok", callback_data="download"),
+        types.InlineKeyboardButton("📥 تحميل TikTok بدون علامة مائية", callback_data="download"),
         types.InlineKeyboardButton("💻 معلومات لغات البرمجة", callback_data="prog"),
-        types.InlineKeyboardButton("🎮 نصائح Free Fire", callback_data="tips")
+        types.InlineKeyboardButton("🎯 نصائح لصناع محتوى TikTok", callback_data="tips")
     )
     return kb
 
@@ -93,13 +95,12 @@ def start(msg):
 # =======================
 # الأزرار
 # =======================
-# جلسة مؤقتة لتخزين جودة وقص الفيديو
 user_sessions = {}
 
 @bot.callback_query_handler(func=lambda c: True)
 def callbacks(call):
     chat_id = call.message.chat.id
-    user_sessions.setdefault(chat_id, {"quality": "720", "trim": None})
+    user_sessions.setdefault(chat_id, {"quality": "720"})
 
     if call.data == "download":
         kb = types.InlineKeyboardMarkup(row_width=3)
@@ -115,18 +116,17 @@ def callbacks(call):
     elif call.data == "prog":
         bot.send_message(chat_id, PROGRAMMING_INFO)
     elif call.data == "tips":
-        bot.send_message(chat_id, FF_TIPS)
+        bot.send_message(chat_id, TIKTOK_TIPS)
 
 # =======================
-# تحميل TikTok مع الجودة + ضغط + قص
+# تحميل TikTok بدون علامة مائية
 # =======================
 @bot.message_handler(func=lambda m: m.text and "tiktok.com" in m.text)
 def download_tiktok(msg):
     chat_id = msg.chat.id
     url = msg.text.strip()
 
-    # استرجاع إعدادات المستخدم
-    session = user_sessions.get(chat_id, {"quality": "720", "trim": None})
+    session = user_sessions.get(chat_id, {"quality": "720"})
     quality = session["quality"]
 
     bot.reply_to(msg, f"⏳ جاري تحميل الفيديو بجودة {quality}p...")
@@ -154,14 +154,6 @@ def download_tiktok(msg):
             os.remove(filename)
             filename = compressed_filename
 
-        # قص الفيديو إذا تم تحديد مدة (مثال: يمكن إضافة وظيفة لاحقًا)
-        if session["trim"]:
-            start, end = session["trim"]
-            trimmed_filename = filename.replace(".mp4", "_trimmed.mp4")
-            subprocess.run(f'ffmpeg -i "{filename}" -ss {start} -to {end} -c copy "{trimmed_filename}" -y', shell=True)
-            os.remove(filename)
-            filename = trimmed_filename
-
         with open(filename, "rb") as video:
             bot.send_video(chat_id, video, caption=f"✅ تم التحميل | جودة {quality}p | جنكيز")
 
@@ -176,6 +168,21 @@ def download_tiktok(msg):
 @bot.message_handler(func=lambda m: True)
 def fallback(msg):
     bot.send_message(msg.chat.id, "ℹ️ استخدم لوحة التحكم بالأسفل 👇", reply_markup=control_panel())
+
+# =======================
+# Keep Alive 24/7 مع Flask
+# =======================
+app = Flask("")
+
+@app.route("/")
+def home():
+    return "Jankiz bot is alive!"
+
+def run():
+    app.run(host="0.0.0.0", port=8080)
+
+t = Thread(target=run)
+t.start()
 
 # =======================
 # تشغيل البوت
